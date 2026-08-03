@@ -13,10 +13,10 @@
 | 🖥️ 任务栏实时显示 | 余额数字（`3.2` / `12.5` / `1.1k` 精简格式）直接绘制在托盘图标上 |
 | 🎨 状态颜色 | 绿 = 余额充足，黄 = 低于预警阈值，红 = 低于危险阈值，灰 = 查询失败 |
 | 💬 悬浮提示 | 悬停显示总额 / 赠送 / 充值 / 币种 / 账户状态 / 更新时间 |
-| 📋 详情弹窗 | 左键点击托盘弹出，失焦自动关闭，余额变化实时推送 |
-| 🔔 阈值通知 | 余额跌破危险阈值时发送一次性系统通知 |
-| ⏱️ 自动轮询 | 默认 10 分钟（可配置 1–60 分钟），失败指数退避（10 分钟 → 30 分钟） |
-| 🔒 密钥安全 | API Key 经 Windows DPAPI（safeStorage）加密后落盘，明文仅存内存 |
+| 📋 详情弹窗 | 左键点击托盘弹出（位置跟随托盘图标、点击即刷新一次），失焦自动关闭，余额变化实时推送 |
+| 🔔 阈值通知 | 余额跌破危险阈值时发送一次性系统通知，点击通知直达充值页 |
+| ⏱️ 自动轮询 | 默认 10 分钟（可配置 1–60 分钟），失败指数退避（10 → 20 → 30 分钟封顶，成功即重置） |
+| 🔒 密钥安全 | API Key 经 Windows DPAPI（safeStorage）加密后落盘，明文仅存内存；设置页仅显示脱敏形式（`sk-****1234`） |
 | 🚀 开机自启 | 托盘右键菜单一键开关 |
 
 ## 快速开始
@@ -39,7 +39,7 @@
 
 ### 3. 常用操作
 
-- 左键点托盘图标 → 余额详情弹窗
+- 左键点托盘图标 → 余额详情弹窗（打开前自动刷新一次，展示最新余额）
 - 右键托盘图标 → 立即刷新 / 打开充值页面 / 设置 / 开机自启 / 退出
 - 悬停图标 → 查看完整余额明细
 
@@ -58,7 +58,7 @@
 | --- | --- |
 | `npm install` | 安装依赖 |
 | `npm run dev` | 构建并启动应用（开发模式） |
-| `npm run build` | 构建 main/preload 到 `dist/`，生成占位图标 |
+| `npm run build` | 构建 main/preload 到 `dist/`，生成占位图标（含渲染层完整性校验） |
 | `npm run typecheck` | TypeScript 类型检查 |
 | `npm run dist` | 打包 NSIS 安装包 + 便携版到 `release/` |
 | `npx electron . --selftest` | 运行数据层自检（临时 userData，不污染真实配置） |
@@ -69,7 +69,7 @@
 | --- | --- |
 | `--settings` | 启动时打开设置窗口 |
 | `--popup` | 启动时打开余额详情弹窗 |
-| `--selftest` | 运行自检后退出：密钥加密往返 / 配置往返 / 无效 Key 返回 401 / 余额格式化 / 图标渲染 |
+| `--selftest` | 运行自检后退出：密钥加密往返 / 配置往返 / 无效 Key 返回 401 / 余额格式化 / 图标渲染 / 密钥脱敏 |
 
 ### 目录结构
 
@@ -78,7 +78,7 @@ DSbalance/
 ├── package.json / tsconfig.json / electron-builder.yml / .npmrc
 ├── assets/icon.png             # 应用图标（脚本生成，可替换）
 ├── scripts/
-│   ├── build.js                # esbuild 打包 main/preload + 拷贝渲染层
+│   ├── build.js                # esbuild 打包 main/preload + 拷贝渲染层（含完整性校验）
 │   ├── gen-icon.js             # 零依赖生成占位 PNG 图标
 │   └── dist.js                 # electron-builder 入口（预置国内镜像）
 └── src/
@@ -128,13 +128,22 @@ Authorization: Bearer <API_KEY>
 
 离屏 BrowserWindow + Canvas 绘制 32×32 位图（圆角底色 + 白色余额数字）→ `nativeImage` → `tray.setImage()`，Windows 按 DPI 自动缩放，高 DPI 下保持清晰。
 
+### 详情弹窗
+
+左键点击托盘时先触发一次余额刷新，再弹出详情窗；窗口定位到托盘图标（鼠标位置）附近，自动识别任务栏方向（上/下/左/右）并紧贴图标内侧，失焦即关闭，不占用任务栏按钮。
+
 ### 配置存储
 
 - 位置：`%APPDATA%\dsbalance\settings.json`
-- API Key 用 `safeStorage.encryptString`（Windows 下即 DPAPI，当前用户级）加密为 base64 存储
+- API Key 用 `safeStorage.encryptString`（Windows 下即 DPAPI，当前用户级）加密为 base64 存储，明文不出主进程；设置页仅返回脱敏形式（`sk-****1234`）
+- 写入采用“临时文件 + 原子替换”，进程崩溃不会损坏配置；保存空 API Key 即清除密钥字段
 - 字段：`pollIntervalMin`（1–60，默认 10）、`warnThreshold`（默认 ¥10）、`dangerThreshold`（默认 ¥2）
 
 ## 常见问题
+
+### 打包版弹窗/设置页无响应（余额不显示、按钮点击无效）
+
+历史上打包产物曾缺失渲染层 JS（`popup.js` / `settings.js` 未进入 asar），导致页面脚本 404、按钮事件未绑定。`scripts/build.js` 已加入渲染层完整性校验，缺失文件时构建直接报错退出。若旧安装包仍有此问题，重新执行 `npm run dist` 打包即可。
 
 ### 点击"测试连接"没有反应
 
