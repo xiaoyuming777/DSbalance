@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'" />
+<title>DeepSeek 余额</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 18px 22px;
+    font-family: "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 13px; color: #e6e9f2;
+    background: linear-gradient(160deg, #1b1f2b 0%, #171a25 100%);
+  }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; background: #2c3244; color: #8b93a7;
+  }
+  .badge.ok { background: rgba(34, 176, 76, .18); color: #5ad07e; }
+  .badge.danger { background: rgba(224, 92, 78, .18); color: #ff8a7a; }
+  #total { font-size: 34px; font-weight: 700; margin: 14px 0 2px; }
+  #totalLabel { font-size: 12px; color: #8b93a7; margin-bottom: 16px; }
+  .detail {
+    background: #20242f; border: 1px solid #2c3244; border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 6px;
+  }
+  .detail .row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .detail .row .k { color: #8b93a7; }
+  .detail .row .v { font-variant-numeric: tabular-nums; }
+  #errorBox { color: #ff8a7a; font-size: 12px; margin: 8px 0; }
+  #updated { font-size: 11px; color: #5c6375; margin: 10px 0 14px; }
+  #actions { display: flex; gap: 10px; }
+  button {
+    flex: 1; padding: 8px 0; border: none; border-radius: 8px;
+    background: #333a4e; color: #e6e9f2; font-size: 13px; cursor: pointer;
+  }
+  button:hover { background: #3d4560; }
+  button.primary { background: #4d6bfe; color: #fff; }
+  button.primary:hover { background: #5d79ff; }
+</style>
+</head>
+<body>
+  <span id="badge" class="badge">查询中…</span>
+  <div id="total">--</div>
+  <div id="totalLabel">总余额</div>
+  <div id="details"></div>
+  <div id="errorBox"></div>
+  <div id="updated"></div>
+  <div id="actions">
+    <button id="btnRefresh" class="primary">立即刷新</button>
+    <button id="btnTopup">打开充值页</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "dsbalance",
+  "version": "0.1.0",
+  "description": "DeepSeek 余额托盘监控工具 —— 任务栏实时显示余额",
+  "main": "dist/main/index.js",
+  "author": "DSBalance",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "gen:icon": "node scripts/gen-icon.js",
+    "build": "node scripts/build.js && node scripts/gen-icon.js",
+    "typecheck": "tsc --noEmit",
+    "dev": "npm run build && electron .",
+    "dist": "npm run build && node scripts/dist.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1",
+    "typescript": "^7.0.2"
+  }
+}

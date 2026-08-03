@@ -1,0 +1,21 @@
+appId: com.dsbalance.app
+productName: DSBalance
+directories:
+  output: release
+files:
+  - dist/**
+  - assets/**
+  - package.json
+win:
+  target:
+    - nsis
+    - portable
+  icon: assets/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: DSBalance
+  runAfterFinish: true
+portable:
+  artifactName: DSBalance-${version}-portable.${ext}

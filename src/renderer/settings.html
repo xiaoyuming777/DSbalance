@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'" />
+<title>DSBalance 设置</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px 24px;
+    font-family: "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 13px; color: #e6e9f2;
+    background: #1b1f2b;
+  }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  .sub { color: #8b93a7; margin: 0 0 18px; font-size: 12px; }
+  section { margin-bottom: 20px; }
+  h2 { font-size: 13px; color: #9fb0ff; margin: 0 0 8px; font-weight: 600; }
+  input[type="password"], input[type="number"], select {
+    width: 100%; padding: 8px 10px;
+    background: #262b3a; color: #e6e9f2;
+    border: 1px solid #3a4156; border-radius: 6px;
+    font-size: 13px; outline: none;
+  }
+  input:focus, select:focus { border-color: #4d6bfe; }
+  .hint { color: #8b93a7; font-size: 11px; margin: 6px 0 0; line-height: 1.5; }
+  .state { font-size: 12px; margin: 8px 0 0; }
+  .state.ok { color: #5ad07e; }
+  .state.warn { color: #e8b75a; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  button {
+    padding: 7px 16px; border: none; border-radius: 6px;
+    background: #333a4e; color: #e6e9f2; font-size: 13px; cursor: pointer;
+  }
+  button:hover { background: #3d4560; }
+  button.primary { background: #4d6bfe; color: #fff; }
+  button.primary:hover { background: #5d79ff; }
+  #testResult, #saveResult { font-size: 12px; color: #8b93a7; }
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 24px; }
+  .two-col { display: flex; gap: 12px; }
+  .two-col > div { flex: 1; }
+</style>
+</head>
+<body>
+  <h1>DSBalance 设置</h1>
+  <p class="sub">DeepSeek 余额托盘监控</p>
+
+  <section>
+    <h2>API Key</h2>
+    <input id="apiKey" type="password" placeholder="sk-…" autocomplete="off" />
+    <p class="hint">在 DeepSeek 开放平台获取：platform.deepseek.com/api_keys。密钥仅加密保存在本机。</p>
+    <p id="keyState" class="state"></p>
+    <div class="row">
+      <button id="btnTest">测试连接</button>
+      <span id="testResult"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>轮询间隔</h2>
+    <select id="pollInterval">
+      <option value="1">1 分钟</option>
+      <option value="5">5 分钟</option>
+      <option value="10">10 分钟</option>
+      <option value="15">15 分钟</option>
+      <option value="30">30 分钟</option>
+      <option value="60">60 分钟</option>
+    </select>
+    <p class="hint">余额变化较慢，默认 10 分钟即可；数字也会画在任务栏图标上。</p>
+  </section>
+
+  <section>
+    <h2>余额阈值（¥）</h2>
+    <div class="two-col">
+      <div>
+        <input id="warnThreshold" type="number" min="0" step="0.1" />
+        <p class="hint">低于预警值：图标变黄</p>
+      </div>
+      <div>
+        <input id="dangerThreshold" type="number" min="0" step="0.1" />
+        <p class="hint">低于危险值：图标变红并通知</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button id="btnSave" class="primary">保存</button>
+    <span id="saveResult"></span>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
