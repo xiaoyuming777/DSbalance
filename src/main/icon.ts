@@ -38,13 +38,19 @@ async function ensureOffscreen(): Promise<BrowserWindow> {
 }
 
 // 精简余额格式：110 → "110"、12.5 → "12.5"、1100 → "1.1k"、0.05 → "0.05"
+// 边界：99.96 → "100"、999.96 → "1k"（避免显示 "100.0"/"1000"）、负数取绝对值后加负号
 export function formatBalance(v: number): string {
   if (!Number.isFinite(v)) return '-';
+  if (v < 0) return '-' + formatBalance(-v);
   if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-  if (v >= 100) return v.toFixed(0);
+  if (v >= 100) {
+    const r = Math.round(v);
+    // 四舍五入后越过 1000 边界时改按 k 显示（如 999.96 → 1000 → "1k"）
+    return r >= 1000 ? formatBalance(r) : String(r);
+  }
   if (v === 0) return '0';
-  if (v < 1) return v.toFixed(2).replace(/0$/, '');
-  return v.toFixed(1);
+  if (v < 1) return v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  return v.toFixed(1).replace(/\.0$/, '');
 }
 
 export async function renderBalanceIcon(state: IconState): Promise<NativeImage> {

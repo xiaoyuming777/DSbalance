@@ -1,7 +1,8 @@
 import { app } from 'electron';
 import { registerIpc } from './ipc';
+import { poller } from './poller';
 import { openPopupWindow } from './popup';
-import { initTray } from './tray';
+import { disposeTray, initTray } from './tray';
 import { openSettingsWindow } from './windows';
 import { runSelfTest } from './selftest';
 
@@ -42,5 +43,11 @@ function boot(): void {
   // 托盘应用：所有窗口关闭后保持常驻
   app.on('window-all-closed', () => {
     /* 不退出 */
+  });
+
+  // 退出前清理：停止轮询、销毁托盘
+  app.on('will-quit', () => {
+    poller.stop();
+    disposeTray();
   });
 }

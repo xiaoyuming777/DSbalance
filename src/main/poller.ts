@@ -1,4 +1,4 @@
-// 轮询调度：启动即拉一次，按配置间隔轮询；失败指数退避（10 分钟 → 30 分钟）
+// 轮询调度：启动即拉一次，按配置间隔轮询；失败指数退避（10 分钟起，翻倍封顶 30 分钟，成功即重置）
 import { ApiError, BalanceResponse, fetchBalance } from './api';
 import { getApiKey, getConfig } from './config';
 
@@ -10,13 +10,15 @@ export type PollStatus =
 
 export type StatusListener = (status: PollStatus) => void;
 
-const BACKOFF_MS = 30 * 60_000;
+const BACKOFF_BASE_MS = 10 * 60_000; // 首次失败退避 10 分钟
+const BACKOFF_MAX_MS = 30 * 60_000; // 退避上限 30 分钟
 
 export class Poller {
   private timer: NodeJS.Timeout | null = null;
   private status: PollStatus = { kind: 'idle' };
   private listeners = new Set<StatusListener>();
   private fetching = false;
+  private failCount = 0; // 连续失败次数，用于指数退避
 
   start(): void {
     void this.poll();
@@ -42,6 +44,7 @@ export class Poller {
 
   // 配置变化后重新按新间隔调度
   reschedule(): void {
+    this.failCount = 0;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.schedule(getConfig().pollIntervalMin * 60_000);
@@ -65,12 +68,16 @@ export class Poller {
       }
       const data = await fetchBalance(key);
       this.status = { kind: 'ok', data, at: Date.now() };
+      this.failCount = 0; // 成功后重置连续失败计数
       this.schedule(getConfig().pollIntervalMin * 60_000);
       console.log('[dsbalance] balance updated, kind=ok');
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.status = { kind: 'error', message, at: Date.now() };
-      this.schedule(BACKOFF_MS); // 失败退避
+      // 指数退避：10 分钟 → 20 分钟 → 30 分钟封顶
+      this.failCount++;
+      const backoff = Math.min(BACKOFF_BASE_MS * 2 ** (this.failCount - 1), BACKOFF_MAX_MS);
+      this.schedule(backoff);
       console.log(`[dsbalance] balance update failed: ${message}`);
     } finally {
       this.fetching = false;

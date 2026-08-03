@@ -6,7 +6,7 @@
 import { app } from 'electron';
 import * as path from 'path';
 import { fetchBalance } from './api';
-import { getApiKey, getConfig, saveConfig, setApiKey } from './config';
+import { getApiKey, getConfig, maskApiKey, saveConfig, setApiKey } from './config';
 import { formatBalance, renderBalanceIcon } from './icon';
 
 export function runSelfTest(): void {
@@ -44,6 +44,10 @@ export function runSelfTest(): void {
       [0.05, '0.05'],
       [0, '0'],
       [NaN, '-'],
+      [99.96, '100'], // 四舍五入后不得出现 "100.0"
+      [999.96, '1k'], // 越过 1000 边界应按 k 显示
+      [0.1, '0.1'], // 尾零去除
+      [-5, '-5'], // 负数防御
     ];
     for (const [input, expected] of fbCases) {
       const got = formatBalance(input);
@@ -58,6 +62,17 @@ export function runSelfTest(): void {
       logs.push(`icon render: ${ok ? 'PASS' : 'FAIL'} (${size.width}x${size.height}, ${img.toBitmap().length} bytes)`);
     } catch (err) {
       logs.push(`icon render: FAIL (${(err as Error).message})`);
+    }
+
+    // 6. 密钥脱敏
+    const maskCases: Array<[string, string]> = [
+      ['sk-test-1234567890', 'sk-****7890'],
+      ['sk-ab', '****'],
+      ['', ''],
+    ];
+    for (const [input, expected] of maskCases) {
+      const got = maskApiKey(input);
+      logs.push(`maskApiKey(${input || '(empty)'}): ${got === expected ? 'PASS' : 'FAIL (' + got + ')'}`);
     }
 
     console.log('[selftest]\n' + logs.join('\n'));

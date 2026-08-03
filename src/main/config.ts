@@ -38,7 +38,10 @@ function readStored(): Partial<StoredConfig> {
 
 function writeStored(stored: Partial<StoredConfig>): void {
   fs.mkdirSync(path.dirname(configPath()), { recursive: true });
-  fs.writeFileSync(configPath(), JSON.stringify(stored, null, 2), 'utf-8');
+  // 先写临时文件再原子替换，避免进程崩溃时损坏 settings.json
+  const tmp = configPath() + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(stored, null, 2), 'utf-8');
+  fs.renameSync(tmp, configPath());
 }
 
 function clampInt(v: unknown, min: number, max: number, def: number): number {
@@ -106,6 +109,18 @@ export function getApiKey(): string | null {
 
 export function setApiKey(key: string): void {
   const stored = readStored();
-  stored.apiKeyEnc = encryptKey(key);
+  const trimmed = key.trim();
+  if (trimmed) {
+    stored.apiKeyEnc = encryptKey(trimmed);
+  } else {
+    delete stored.apiKeyEnc; // 空字符串视为清除密钥：删除字段而非存空值
+  }
   writeStored(stored);
+}
+
+// 脱敏显示 API Key：sk-xxxx1234 → sk-****1234（短密钥整体打码）
+export function maskApiKey(key: string): string {
+  if (!key) return '';
+  if (key.length <= 8) return '****';
+  return key.slice(0, 3) + '****' + key.slice(-4);
 }

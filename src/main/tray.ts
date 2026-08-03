@@ -18,9 +18,19 @@ export function initTray(): void {
   tray = new Tray(icon);
   tray.setToolTip('DeepSeek 余额');
   tray.setContextMenu(buildMenu());
-  tray.on('click', () => openPopupWindow()); // 左键点击弹详情
+  tray.on('click', () => {
+    // 点击托盘先拉取最新余额（弹窗打开后通过 balance:changed 实时收到新数据）
+    void poller.refresh();
+    openPopupWindow();
+  }); // 左键点击弹详情
   poller.onChange(updateTray);
   poller.start(); // 启动即拉取一次余额
+}
+
+// 退出前销毁托盘，避免残留图标
+export function disposeTray(): void {
+  tray?.destroy();
+  tray = null;
 }
 
 function buildMenu(): Menu {
@@ -114,11 +124,13 @@ async function updateTray(status: PollStatus): Promise<void> {
     if (Number.isFinite(total)) {
       const cfg = getConfig();
       if (prevTotal !== null && prevTotal > cfg.dangerThreshold && total <= cfg.dangerThreshold) {
-        new Notification({
+        const notice = new Notification({
           title: 'DeepSeek 余额不足',
           body: `当前余额 ¥${info?.total_balance ?? total}，已低于危险阈值（¥${cfg.dangerThreshold}），请及时充值`,
           icon: APP_ICON,
-        }).show();
+        });
+        notice.on('click', () => void shell.openExternal('https://platform.deepseek.com/top_up')); // 点击通知直达充值页
+        notice.show();
       }
       prevTotal = total;
     }

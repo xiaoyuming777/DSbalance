@@ -1,22 +1,24 @@
 // IPC 注册：设置页/详情窗通过 preload 桥与主进程通信
 import { BrowserWindow, ipcMain, shell } from 'electron';
 import { fetchBalance } from './api';
-import { getApiKey, getConfig, saveConfig, setApiKey, AppConfig } from './config';
+import { getApiKey, getConfig, maskApiKey, saveConfig, setApiKey, AppConfig } from './config';
 import { poller } from './poller';
 
 // 允许打开的站外链接白名单
 const ALLOWED_HOSTS = new Set(['platform.deepseek.com', 'api-docs.deepseek.com']);
 
 export function registerIpc(): void {
-  // 设置页读取配置（不含密钥本身，只含是否已配置）
+  // 设置页读取配置（不含密钥明文，只含是否已配置及脱敏后的密钥）
   ipcMain.handle('config:get', () => {
-    return { ...getConfig(), hasApiKey: getApiKey() !== null };
+    const key = getApiKey();
+    return { ...getConfig(), hasApiKey: key !== null, apiKeyMasked: key ? maskApiKey(key) : null };
   });
 
   ipcMain.handle('config:save', (_e, partial: Partial<AppConfig>) => {
     const next = saveConfig(partial);
     poller.reschedule(); // 轮询间隔可能已变化
-    return { ...next, hasApiKey: getApiKey() !== null };
+    const key = getApiKey();
+    return { ...next, hasApiKey: key !== null, apiKeyMasked: key ? maskApiKey(key) : null };
   });
 
   ipcMain.handle('config:setApiKey', async (_e, key: string) => {
