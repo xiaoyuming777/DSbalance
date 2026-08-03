@@ -79,6 +79,11 @@ const png = Buffer.concat([
 ]);
 
 const out = path.join(__dirname, '..', 'assets', 'icon.png');
+// 用户可自行替换 assets/icon.png 作为应用 logo；已存在时不再覆盖（本脚本仅负责生成占位图标）
+if (fs.existsSync(out)) {
+  console.log(`icon exists, skip: ${out}`);
+  process.exit(0);
+}
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, png);
 console.log(`icon written: ${out} (${png.length} bytes)`);

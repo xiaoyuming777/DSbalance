@@ -76,7 +76,7 @@
 ```
 DSbalance/
 ├── package.json / tsconfig.json / electron-builder.yml / .npmrc
-├── assets/icon.png             # 应用图标（脚本生成，可替换）
+├── assets/icon.png             # 应用 logo（可替换；缺失时由脚本生成占位图标）
 ├── scripts/
 │   ├── build.js                # esbuild 打包 main/preload + 拷贝渲染层（含完整性校验）
 │   ├── gen-icon.js             # 零依赖生成占位 PNG 图标
