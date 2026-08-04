@@ -5,7 +5,7 @@ import { BalanceInfo, BalanceResponse } from './api';
 import { getConfig } from './config';
 import { IconState, formatBalance, renderBalanceIcon } from './icon';
 import { PollStatus, poller } from './poller';
-import { openPopupWindow } from './popup';
+import { isPopupOpen, keepPopupOpen, openPopupWindow } from './popup';
 import { openSettingsWindow } from './windows';
 
 let tray: Tray | null = null;
@@ -21,7 +21,11 @@ export function initTray(): void {
   tray.on('click', () => {
     // 点击托盘先拉取最新余额（弹窗打开后通过 balance:changed 实时收到新数据）
     void poller.refresh();
-    openPopupWindow();
+    if (isPopupOpen()) {
+      keepPopupOpen(); // 弹窗已打开：取消 blur 触发的延迟关闭，保持打开而非关闭又打开
+    } else {
+      openPopupWindow();
+    }
   }); // 左键点击弹详情
   poller.onChange(updateTray);
   poller.start(); // 启动即拉取一次余额

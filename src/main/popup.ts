@@ -31,10 +31,41 @@ function popupPosition(): { x: number; y: number } {
 }
 
 let popupWindow: BrowserWindow | null = null;
+let closeTimer: NodeJS.Timeout | null = null;
+
+const BLUR_CLOSE_DELAY_MS = 250; // blur 后延迟关闭：为托盘点击取消关闭留出时间
+
+// blur 后延迟关闭（点击托盘会让弹窗失焦，但不应因此被关闭又重建）
+function scheduleClose(): void {
+  if (closeTimer) clearTimeout(closeTimer);
+  closeTimer = setTimeout(() => {
+    closeTimer = null;
+    popupWindow?.close();
+  }, BLUR_CLOSE_DELAY_MS);
+}
+
+function cancelScheduledClose(): void {
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
+}
+
+export function isPopupOpen(): boolean {
+  return !!popupWindow && !popupWindow.isDestroyed();
+}
+
+// 托盘点击时调用：取消 blur 触发的延迟关闭并重新聚焦，避免弹窗关闭又打开
+function keepPopupOpen(): void {
+  cancelScheduledClose();
+  popupWindow?.focus();
+}
+
+export { keepPopupOpen };
 
 export function openPopupWindow(): void {
-  if (popupWindow && !popupWindow.isDestroyed()) {
-    popupWindow.focus();
+  if (isPopupOpen()) {
+    popupWindow?.focus();
     return;
   }
   const { x, y } = popupPosition();
@@ -58,9 +89,10 @@ export function openPopupWindow(): void {
   });
   popupWindow.once('ready-to-show', () => popupWindow?.show());
   forwardConsole(popupWindow, 'popup');
-  popupWindow.on('blur', () => popupWindow?.close()); // 点击外部即关闭
+  popupWindow.on('blur', scheduleClose); // 点击外部延迟关闭（托盘点击可取消）
   popupWindow.on('closed', () => {
     popupWindow = null;
+    cancelScheduledClose();
   });
   popupWindow
     .loadFile(rendererPath('popup.html'))
